@@ -66,7 +66,7 @@ for(let i = 0; i < 11; i++){
     players.push(new Player())
 }
 
-io.sockets.on('connection', function (socket){
+io.sockets.on('connection', function (socket){3
     queueCounter++;
     socket.emit("id", queueCounter);
     socket.on("name", function(data) {
@@ -172,15 +172,41 @@ io.sockets.on('connection', function (socket){
             if(!night){
                 dayVotes.push(data);
                 if(dayVotes.length == numAlive){
-
+                    deadName = mode(dayVotes);
+                    dayVotes = [];
+                    for(let i = 1; i < players.length; i++){
+                        if(deadName === players[i].name){
+                            numAlive--;
+                            players[i].isAlive = false;
+                        }
+                    }
+                    io.local.emit("update", players)
                 }
             }
         })
     }
 })
 
-function maxfreq(data){
-    
+function mode(array)
+{
+    if(array.length == 0)
+        return null;
+    var modeMap = {};
+    var maxEl = array[0], maxCount = 1;
+    for(var i = 0; i < array.length; i++)
+    {
+        var el = array[i];
+        if(modeMap[el] == null)
+            modeMap[el] = 1;
+        else
+            modeMap[el]++;  
+        if(modeMap[el] > maxCount)
+        {
+            maxEl = el;
+            maxCount = modeMap[el];
+        }
+    }
+    return maxEl;
 }
 
 function Player(name, isMafia, isDetective, isDoctor){
