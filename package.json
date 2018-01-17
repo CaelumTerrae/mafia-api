@@ -1,0 +1,26 @@
+{
+  "name": "api-starter-app",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm install",
+    "mongo": "mongod -f ./models/mongod.conf & echo $! > .mongo_pid",
+    "dev": "npm run mongo & nodemon api.js",
+    "mongo-stop": "kill $(cat .mongo_pid) && rm .mongo_pid",
+    "start": "nodemon api.js"
+  },
+  "dependencies": {
+    "bcrypt-nodejs": "0.0.3",
+    "body-parser": "~1.13.2",
+    "cookie-parser": "~1.3.5",
+    "debug": "~2.2.0",
+    "email-validator": "^1.0.7",
+    "express": "~4.13.1",
+    "jwt-simple": "^0.5.1",
+    "mongoose": "^4.12.4",
+    "morgan": "~1.6.1",
+    "nodemon": "^1.12.1",
+    "serve-favicon": "~2.3.0",
+    "socket.io": "^2.0.4"
+  }
+}
