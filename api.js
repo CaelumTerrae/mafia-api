@@ -62,18 +62,18 @@ var night = true;
 var gameOver = false;
 let players = []
 
-for(let i = 0; i < 11; i++){
+for(let i = 0; i < 10; i++){
     players.push(new Player())
 }
 
-io.sockets.on('connection', function (socket){3
-    queueCounter++;
+io.sockets.on('connection', function (socket){
     socket.emit("id", queueCounter);
     socket.on("name", function(data) {
         players[queueCounter].name = data;
     })
 	console.log("There are " + queueCounter + " players waiting to be placed in a room")
-    if(queueCounter === 10){
+    queueCounter++;
+    if(queueCounter === 9){
         
         
 
@@ -81,26 +81,26 @@ io.sockets.on('connection', function (socket){3
         
         // Randomly assign 
         
-        let ids = [1,2,3,4,5,6,7,8,9,10];
+        let ids = [0,1,2,3,4,5,6,7,8,9];
         //pick two mafia
         let numMafia = 2;
         for(let i = 0; i < 2; i++){
-            let mafiaIndex = Math.floor(Math.random() * ids.length) + 1;
+            let mafiaIndex = Math.floor(Math.random() * ids.length);
             console.log("Mafia:  " + ids[mafiaIndex])
             players[ids[mafiaIndex]].isMafia = true;
             io.local.emit(ids[mafiaIndex].toString(), "mafia")
             ids.splice(mafiaIndex,1)
         }
         //pick a detective
-        let detectiveIndex = Math.floor(Math.random() * ids.length) + 1;
+        let detectiveIndex = Math.floor(Math.random() * ids.length);
         console.log("Detective: " + ids[detectiveIndex])
-        players
+        players[ids[detectiveIndex]].isDetective = true;
         io.local.emit(ids[detectiveIndex].toString(), "detective")
         ids.splice(detectiveIndex,1)
 
         //pick a doctor
         let numDoctor = 1
-        let doctorIndex = Math.floor(Math.random() * ids.length) + 1;
+        let doctorIndex = Math.floor(Math.random() * ids.length);
         console.log("doctor: " + ids[doctorIndex])
         io.local.emit(ids[doctorIndex].toString(), "doctor")
         ids.splice(doctorIndex,1)
@@ -112,6 +112,7 @@ io.sockets.on('connection', function (socket){3
         }
         //Game starts
         gameOver = false;
+        io.local.emit("update", players)
         night = true;
         let mafiaVotes = [];
         let nightVotes = 0;
@@ -134,7 +135,7 @@ io.sockets.on('connection', function (socket){3
                     nightVotes = 0;
                     if(deadName == healName){
                         deadName = "";
-                        numAlive++;
+                        // numAlive++;
                     }
                     for(let i = 1; i < players.length; i++){
                         if(deadName === players[i].name){
@@ -143,19 +144,20 @@ io.sockets.on('connection', function (socket){3
                         }
                     }
                     io.local.emit("update", players)
+                    night = false
                 }
             }
         })
 
         socket.on("heal", function(data){
             if(night){
-                nightVotes++;
                 healName = data;
+                nightVotes++;
                 if (nightVotes == numDoctor + numMafia){
                     nightVotes = 0;
                     if(deadName == healName){
                         deadName = "";
-                        numAlive++;
+                        // numAlive++;
                     }
                     for(let i = 1; i < players.length; i++){
                         if(deadName === players[i].name){
@@ -164,6 +166,7 @@ io.sockets.on('connection', function (socket){3
                         }
                     }
                     io.local.emit("update", players)
+                    night = false
                 }
             }
         })
@@ -181,6 +184,7 @@ io.sockets.on('connection', function (socket){3
                         }
                     }
                     io.local.emit("update", players)
+                    night = true
                 }
             }
         })
@@ -212,9 +216,9 @@ function mode(array)
 function Player(name, isMafia, isDetective, isDoctor){
     this.name = name;
     this.isAlive = true;
-    this.isMafia = isMafia;
-    this.isDetective = isDetective;
-    this.isDoctor = isDoctor;
+    this.isMafia = false;
+    this.isDetective = false;
+    this.isDoctor = false;
 }
 
 module.exports = app;
