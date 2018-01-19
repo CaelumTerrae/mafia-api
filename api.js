@@ -44,6 +44,7 @@ if (app.get('env') === 'development') {
     });
 }
 
+ 
 // production error handler
 app.use(function(err, req, res, next) {
     res.status(err.status || 500).send();
@@ -55,7 +56,11 @@ console.log('Listening at http://localhost:%s in %s mode',
 
 var socket = require('socket.io');
 
-var io = socket(server)
+var io = socket(server, {
+    serveClient: false,
+    pingInterval:1000,
+    pingTimeout: 100000
+})
 
 var queueCounter = 0;
 var night = true;
@@ -69,11 +74,11 @@ for(let i = 0; i < 10; i++){
 io.sockets.on('connection', function (socket){
     socket.emit("id", queueCounter);
     socket.on("name", function(data) {
-        players[queueCounter].name = data;
+        players[data.id].name = data.nick;
     })
-	console.log("There are " + queueCounter + " players waiting to be placed in a room")
+	console.log("There are " + (queueCounter + 1) + " players waiting to be placed in a room")
     queueCounter++;
-    if(queueCounter === 9){
+    if(queueCounter === 10){
         
         
 
@@ -88,30 +93,32 @@ io.sockets.on('connection', function (socket){
             let mafiaIndex = Math.floor(Math.random() * ids.length);
             console.log("Mafia:  " + ids[mafiaIndex])
             players[ids[mafiaIndex]].isMafia = true;
-            io.local.emit(ids[mafiaIndex].toString(), "mafia")
+            // io.local.emit(ids[mafiaIndex].toString(), "mafia")
             ids.splice(mafiaIndex,1)
         }
         //pick a detective
         let detectiveIndex = Math.floor(Math.random() * ids.length);
         console.log("Detective: " + ids[detectiveIndex])
         players[ids[detectiveIndex]].isDetective = true;
-        io.local.emit(ids[detectiveIndex].toString(), "detective")
+        // io.local.emit(ids[detectiveIndex].toString(), "detective")
         ids.splice(detectiveIndex,1)
 
         //pick a doctor
         let numDoctor = 1
         let doctorIndex = Math.floor(Math.random() * ids.length);
         console.log("doctor: " + ids[doctorIndex])
-        io.local.emit(ids[doctorIndex].toString(), "doctor")
+        players[ids[doctorIndex]].isDoctor = true;
+        // io.local.emit(ids[doctorIndex].toString(), "doctor")
         ids.splice(doctorIndex,1)
 
         //rest are just normals
         let numNormals = ids.length;
         for(let i = 0; i < ids.length; i++){
-            io.local.emit(ids[i], "citizen")
+            // io.local.emit(ids[i], "citizen")
         }
         //Game starts
         gameOver = false;
+        console.log(players)
         io.local.emit("update", players)
         night = true;
         let mafiaVotes = [];
@@ -124,9 +131,10 @@ io.sockets.on('connection', function (socket){
 
         // receieves message from client to kill a user. data is name of user
         socket.on("mafiakill", function(data){
+            console.log("kill for " + data.id)
             if(night){
                 nightVotes++;
-                mafiaVotes.push(data);
+                mafiaVotes.push(data.id);
                 if (mafiaVotes.length == numMafia){
                     deadName = mafiaVotes[Math.floor(Math.random() * numMafia)]
                     mafiaVotes = []
@@ -138,20 +146,19 @@ io.sockets.on('connection', function (socket){
                         // numAlive++;
                     }
                     for(let i = 1; i < players.length; i++){
-                        if(deadName === players[i].name){
+                        if(deadName === i){
                             players[i].isAlive = false;
                             numAlive--;
                         }
                     }
                     io.local.emit("update", players)
-                    night = false
                 }
             }
         })
 
         socket.on("heal", function(data){
             if(night){
-                healName = data;
+                healName = data.id;
                 nightVotes++;
                 if (nightVotes == numDoctor + numMafia){
                     nightVotes = 0;
@@ -160,20 +167,20 @@ io.sockets.on('connection', function (socket){
                         // numAlive++;
                     }
                     for(let i = 1; i < players.length; i++){
-                        if(deadName === players[i].name){
+                        if(deadName === i){
                             numAlive--;
                             players[i].isAlive = false;
                         }
                     }
                     io.local.emit("update", players)
-                    night = false
                 }
             }
         })
 
         socket.on("dayVote", function(data){
-            if(!night){
-                dayVotes.push(data);
+            if(night){
+                console.log("voted for :" + data.id)
+                dayVotes.push(data.id);
                 if(dayVotes.length == numAlive){
                     deadName = mode(dayVotes);
                     dayVotes = [];
@@ -184,7 +191,7 @@ io.sockets.on('connection', function (socket){
                         }
                     }
                     io.local.emit("update", players)
-                    night = true
+
                 }
             }
         })
